@@ -38,13 +38,10 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# Toggle verbose debug logging. Set to True to enable more detailed logs.
-ENABLE_DEBUG_LOGGING = False
-
-
+# Debug logging follows HA's log level (no hardcoded flag needed).
 def debug_log(msg: str, *args: Any) -> None:
-    """Log message only when debug logging is enabled."""
-    if ENABLE_DEBUG_LOGGING:
+    """Log message only when HA logger is set to DEBUG for this component."""
+    if _LOGGER.isEnabledFor(logging.DEBUG):
         _LOGGER.debug(msg, *args)
 
 # Mapping from Kumo Cloud operation modes to Home Assistant HVAC modes
@@ -103,6 +100,7 @@ class KumoCloudClimate(CoordinatorEntity, ClimateEntity):
         super().__init__(device.coordinator)
         self.device = device
         self._attr_unique_id = device.unique_id
+
 
         # Set up supported features based on device profile
         self._setup_supported_features()
@@ -184,6 +182,7 @@ class KumoCloudClimate(CoordinatorEntity, ClimateEntity):
             "operationMode", adapter.get("operationMode", OPERATION_MODE_OFF)
         )
         power = device_data.get("power", adapter.get("power", 0))
+
         debug_log(
             "API returned for %s: operationMode=%s, power=%s",
             self.device.device_serial,
@@ -319,7 +318,6 @@ class KumoCloudClimate(CoordinatorEntity, ClimateEntity):
             self.device.device_serial,
             modes,
         )
-
         return modes
 
     @property
