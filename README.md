@@ -46,7 +46,9 @@ This integration allows you to control your Mitsubishi Electric climate control 
 ## Supported Features
 
 - **Temperature Control**: Set target temperature with 0.5°C precision
-- **Fan Speed Control**: Auto, Low, Medium, High (depending on device capabilities)
+- **Fan Speed Control**: Auto, Low, Medium, High, Quiet and Powerful (depending on device capabilities)
+  The integration decodes the raw `fanSpeed` value from the API and logs both
+  the API value and its Home Assistant equivalent for easier debugging.
 - **Air Direction Control**: Horizontal, Vertical, Swing (if supported by device)
 - **Current Temperature**: Monitor room temperature
 - **Humidity Monitoring**: View current humidity levels
