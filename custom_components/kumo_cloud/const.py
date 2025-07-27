@@ -32,6 +32,8 @@ FAN_SPEED_AUTO = "auto"
 FAN_SPEED_LOW = "low"
 FAN_SPEED_MEDIUM = "medium"
 FAN_SPEED_HIGH = "high"
+FAN_SPEED_QUIET = "quiet"
+FAN_SPEED_POWERFUL = "powerful"
 
 # Air direction
 AIR_DIRECTION_HORIZONTAL = "horizontal"

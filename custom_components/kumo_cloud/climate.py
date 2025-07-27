@@ -31,6 +31,8 @@ from .const import (
     FAN_SPEED_LOW,
     FAN_SPEED_MEDIUM,
     FAN_SPEED_HIGH,
+    FAN_SPEED_QUIET,
+    FAN_SPEED_POWERFUL,
     AIR_DIRECTION_HORIZONTAL,
     AIR_DIRECTION_VERTICAL,
     AIR_DIRECTION_SWING,
@@ -52,7 +54,38 @@ KUMO_TO_HVAC_MODE = {
 HVAC_TO_KUMO_MODE = {v: k for k, v in KUMO_TO_HVAC_MODE.items()}
 
 # Fan speed mappings
-KUMO_FAN_SPEEDS = [FAN_SPEED_AUTO, FAN_SPEED_LOW, FAN_SPEED_MEDIUM, FAN_SPEED_HIGH]
+KUMO_FAN_SPEEDS = [
+    FAN_SPEED_AUTO,
+    FAN_SPEED_LOW,
+    FAN_SPEED_MEDIUM,
+    FAN_SPEED_HIGH,
+    FAN_SPEED_QUIET,
+    FAN_SPEED_POWERFUL,
+]
+
+# Mapping API fan speed values to HA values
+KUMO_TO_HA_FAN_MODE = {speed: speed for speed in KUMO_FAN_SPEEDS}
+
+# Reverse mapping
+HA_TO_KUMO_FAN_MODE = {v: k for k, v in KUMO_TO_HA_FAN_MODE.items()}
+
+
+def decode_fan_mode(api_value: str | None) -> str | None:
+    """Decode API fan mode to Home Assistant fan mode."""
+    if api_value is None:
+        return None
+    ha_value = KUMO_TO_HA_FAN_MODE.get(api_value)
+    _LOGGER.debug("Decoding fan mode %s -> %s", api_value, ha_value)
+    return ha_value
+
+
+def encode_fan_mode(ha_value: str | None) -> str | None:
+    """Encode Home Assistant fan mode to API fan mode."""
+    if ha_value is None:
+        return None
+    api_value = HA_TO_KUMO_FAN_MODE.get(ha_value)
+    _LOGGER.debug("Encoding fan mode %s -> %s", ha_value, api_value)
+    return api_value
 
 # Air direction mappings
 KUMO_AIR_DIRECTIONS = [
@@ -264,7 +297,8 @@ class KumoCloudClimate(CoordinatorEntity, ClimateEntity):
         # Check device data first, then adapter data
         device_data = self.device.device_data
         adapter = self.device.zone_data.get("adapter", {})
-        return device_data.get("fanSpeed", adapter.get("fanSpeed"))
+        fan = device_data.get("fanSpeed", adapter.get("fanSpeed"))
+        return decode_fan_mode(fan)
 
     @property
     def fan_modes(self) -> list[str] | None:
@@ -287,6 +321,10 @@ class KumoCloudClimate(CoordinatorEntity, ClimateEntity):
             modes.append(FAN_SPEED_MEDIUM)
         if num_fan_speeds >= 3:
             modes.append(FAN_SPEED_HIGH)
+        if num_fan_speeds >= 4:
+            modes.append(FAN_SPEED_QUIET)
+        if num_fan_speeds >= 5:
+            modes.append(FAN_SPEED_POWERFUL)
 
         return modes
 
@@ -412,7 +450,8 @@ class KumoCloudClimate(CoordinatorEntity, ClimateEntity):
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
-        await self._send_command_and_refresh({"fanSpeed": fan_mode})
+        api_mode = encode_fan_mode(fan_mode)
+        await self._send_command_and_refresh({"fanSpeed": api_mode})
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set new target swing mode."""
