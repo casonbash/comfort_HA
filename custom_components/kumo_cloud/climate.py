@@ -38,6 +38,15 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Toggle verbose debug logging. Set to True to enable more detailed logs.
+ENABLE_DEBUG_LOGGING = False
+
+
+def debug_log(msg: str, *args: Any) -> None:
+    """Log message only when debug logging is enabled."""
+    if ENABLE_DEBUG_LOGGING:
+        _LOGGER.debug(msg, *args)
+
 # Mapping from Kumo Cloud operation modes to Home Assistant HVAC modes
 KUMO_TO_HVAC_MODE = {
     OPERATION_MODE_OFF: HVACMode.OFF,
@@ -175,12 +184,24 @@ class KumoCloudClimate(CoordinatorEntity, ClimateEntity):
             "operationMode", adapter.get("operationMode", OPERATION_MODE_OFF)
         )
         power = device_data.get("power", adapter.get("power", 0))
+        debug_log(
+            "API returned for %s: operationMode=%s, power=%s",
+            self.device.device_serial,
+            operation_mode,
+            power,
+        )
 
         # If power is 0, device is off regardless of operation mode
         if power == 0:
             return HVACMode.OFF
 
-        return KUMO_TO_HVAC_MODE.get(operation_mode, HVACMode.OFF)
+        hvac_mode = KUMO_TO_HVAC_MODE.get(operation_mode, HVACMode.OFF)
+        debug_log(
+            "HA computed hvac_mode for %s: %s",
+            self.device.device_serial,
+            hvac_mode,
+        )
+        return hvac_mode
 
     @property
     def hvac_modes(self) -> list[HVACMode]:
@@ -264,7 +285,13 @@ class KumoCloudClimate(CoordinatorEntity, ClimateEntity):
         # Check device data first, then adapter data
         device_data = self.device.device_data
         adapter = self.device.zone_data.get("adapter", {})
-        return device_data.get("fanSpeed", adapter.get("fanSpeed"))
+        fan_speed = device_data.get("fanSpeed", adapter.get("fanSpeed"))
+        debug_log(
+            "API returned fanSpeed for %s: %s",
+            self.device.device_serial,
+            fan_speed,
+        )
+        return fan_speed
 
     @property
     def fan_modes(self) -> list[str] | None:
@@ -287,6 +314,11 @@ class KumoCloudClimate(CoordinatorEntity, ClimateEntity):
             modes.append(FAN_SPEED_MEDIUM)
         if num_fan_speeds >= 3:
             modes.append(FAN_SPEED_HIGH)
+        debug_log(
+            "HA exposing fan modes for %s based on capabilities: %s",
+            self.device.device_serial,
+            modes,
+        )
 
         return modes
 
@@ -296,7 +328,13 @@ class KumoCloudClimate(CoordinatorEntity, ClimateEntity):
         # Check device data first, then adapter data
         device_data = self.device.device_data
         adapter = self.device.zone_data.get("adapter", {})
-        return device_data.get("airDirection", adapter.get("airDirection"))
+        swing = device_data.get("airDirection", adapter.get("airDirection"))
+        debug_log(
+            "API returned airDirection for %s: %s",
+            self.device.device_serial,
+            swing,
+        )
+        return swing
 
     @property
     def swing_modes(self) -> list[str] | None:
@@ -349,6 +387,11 @@ class KumoCloudClimate(CoordinatorEntity, ClimateEntity):
 
     async def _send_command_and_refresh(self, commands: dict[str, Any]) -> None:
         """Send command and ensure fresh status update."""
+        debug_log(
+            "HA sending command to %s: %s",
+            self.device.device_serial,
+            commands,
+        )
         await self.device.send_command(commands)
         # The device.send_command method now handles refreshing the device status
         # Also trigger a state update for this entity to reflect changes immediately
